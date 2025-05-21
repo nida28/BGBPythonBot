@@ -13,10 +13,10 @@ This repository **does not include** the `.env` file or the embeddings JSONL fil
     OPENAI_API_KEY=your_openai_api_key_here
     ```
 
-2. **Add the embeddings file** to the `Data/` folder as:
+2. **Add the embeddings file** to the root folder as:
 
     ```bash
-    Data/bgb_embeddings_new_data.jsonl
+    bgb_embeddings_new_data.jsonl
     ```
 
 This file contains the precomputed embeddings used by the application and is required for the chatbot to function.
