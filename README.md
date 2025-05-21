@@ -26,5 +26,5 @@ This file contains the precomputed embeddings used by the application and is req
 ### Notes:
 
 - Make sure your `.env` file is included in `.gitignore` to prevent accidental commits.
-- The embeddings file is large and proprietary, so please request access separately or generate your own using the embedding script.
+- The embeddings file is large and proprietary, so please request access separately or generate your own using the embedding script here: https://github.com/nida28/BGBRagBot/blob/development/RAGBaseApp/RAGBaseApp/Program.cs 
 - Without these files, the chatbot will not start or will fail to respond correctly.
