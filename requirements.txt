@@ -1,0 +1,7 @@
+gradio
+openai
+numpy
+fastapi
+uvicorn
+python-dotenv
+html5lib
