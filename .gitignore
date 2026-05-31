@@ -52,29 +52,10 @@ htmlcov/
 # Local testing
 temp/
 test_files/
-
-# Internal notes, reports, and presentation artifacts
-BGBPythonBot_Changes_Report.xlsx
-BGBPythonBot_Technical_Presentation.pptx
-CHANGES_SUMMARY.md
-DEPLOYMENT_MANIFEST.md
-FINAL_REPORT.md
-FINAL_SUMMARY.md
-GRADIO_MULTIMODAL_UPDATE.md
-IMPLEMENTATION_GUIDE.md
-PRESENTATION_GUIDE.md
-PRESENTATION_INDEX.md
-PRESENTER_NOTES.md
-PROJECT_INDEX.md
-QUICK_REFERENCE.md
-README_PRESENTATION.md
-START_HERE_PRESENTATION.md
-VISUAL_REFERENCE.md
+test_document_handling.py
 build_validate.py
 create_tech_presentation.py
-sample_bgb_excerpt.pdf
-sample_test_document.txt
-test_document_handling.py
+
 
 # Organized docs and data folders
 /docs/
