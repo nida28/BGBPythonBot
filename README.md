@@ -1,5 +1,5 @@
 # BGB Bot
-BGB Legal ChatBot is a friendly legal assistant focused on the German Civil Code (BGB). Using Retrieval-Augmented Generation (RAG), it provides clear, practical answers to questions about tenant rights, contracts, consumer protections, and more—tailored especially for expats in Germany. The bot references official BGB sections with clickable links for easy access to the original legal texts. Hosted [**here**] (https://bgb-bot-230904575198.europe-west1.run.app).
+BGB Legal ChatBot is a friendly legal assistant focused on the German Civil Code (BGB). Using Retrieval-Augmented Generation (RAG), it provides clear, practical answers to questions about tenant rights, contracts, consumer protections, and more—tailored especially for expats in Germany. The bot references official BGB sections with clickable links for easy access to the original legal texts. Hosted [**here**](https://bgb-bot-230904575198.europe-west1.run.app).
 
 ## Setup Instructions
 
