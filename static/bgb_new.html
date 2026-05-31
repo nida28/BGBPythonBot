@@ -5,24 +5,110 @@
 <head>
     <meta charset="utf-8" />
     <title>German Civil Code (BGB)</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.min.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%234C8DFF'/%3E%3Cstop offset='100%25' stop-color='%237fb0ff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='41' text-anchor='middle' font-size='34' font-family='Newsreader,serif' fill='white'%3E%C2%A7%3C/text%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet" />
+    <script>
+        (function () {
+            var t = localStorage.getItem("lex_theme");
+            if (!t) {
+                t = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+            }
+            document.documentElement.setAttribute("data-theme", t);
+        })();
+    </script>
 
     <style>
-        body {
-            max-width: 900px;
-            margin: auto;
-            padding: 2rem;
-            font-family: Arial, sans-serif;
-            color: #333;
-            font-family: 'Open Sans', Arial, sans-serif;
-            font-size: 16px;
-            line-height: 1.6;
+        :root {
+            --bg: #0B0E13;
+            --surface: #141a24;
+            --surface-2: #1a2230;
+            --border: rgba(255,255,255,0.08);
+            --text: #EAEDF2;
+            --dim: #b9c1ce;
+            --faint: #8b94a4;
+            --accent: #4C8DFF;
+            --accent-soft: rgba(76,141,255,0.13);
+        }
 
+        html[data-theme="light"] {
+            --bg: #F7F9FC;
+            --surface: #FFFFFF;
+            --surface-2: #F1F4F9;
+            --border: rgba(12,22,40,0.09);
+            --text: #141A23;
+            --dim: #44505f;
+            --faint: #6a7484;
+            --accent: #2F6DF0;
+            --accent-soft: rgba(47,109,240,0.09);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            background: var(--bg);
+            color: var(--text);
+            font-family: "Figtree", sans-serif;
+            font-size: 15px;
+            line-height: 1.65;
+            -webkit-font-smoothing: antialiased;
         }
 
         #container {
-            padding: 1rem;
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+        }
+
+        .lex-top {
+            max-width: 900px;
+            margin: 0 auto 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .lex-glyph {
+            width: 30px;
+            height: 30px;
+            border-radius: 9px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(150deg, var(--accent), #7fb0ff);
+            color: #fff;
+            font-family: "Newsreader", serif;
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .lex-top small {
+            color: var(--dim);
+            font-weight: 500;
+            margin-left: 6px;
+            letter-spacing: 0;
+        }
+
+        .lex-spacer { flex: 1; }
+
+        .theme-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--dim);
+            display: grid;
+            place-items: center;
+            cursor: pointer;
         }
 
         p {
@@ -33,28 +119,29 @@
         h1,
         h2 {
             text-align: center;
-            color: #0a3d62;
+            color: var(--text);
             font-weight: 700;
             margin-top: 2rem;
             margin-bottom: 1rem;
+            letter-spacing: -0.02em;
         }
 
         h1 {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
         }
 
         h2 {
-            font-size: 1.9rem;
+            font-size: 1.25rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            color: #34495e;
+            color: var(--dim);
             font-style: italic;
         }
 
 
         p[style*="text-align: center"][style*="font-weight: bold"] {
-            color: #004080;
+            color: var(--accent);
             margin-top: 2rem;
             margin-bottom: 1rem;
             text-align: center !important;
@@ -65,7 +152,7 @@
             font-weight: 600;
             font-size: 1.3rem;
             margin-bottom: 1.5rem;
-            color: #1a1a1a;
+            color: var(--text);
         }
 
         /* List styling */
@@ -75,11 +162,11 @@
             padding-left: 1rem;
             font-size: 1.05rem;
             line-height: 1.7;
-            border-left: 3px solid #f0db4c;
-            background: #fffbea;
+            border-left: 3px solid var(--accent);
+            background: var(--surface-2);
             padding-top: 1rem;
             padding-bottom: 1rem;
-            border-radius: 4px;
+            border-radius: 10px;
         }
 
         /* List items */
@@ -92,12 +179,32 @@
         ol li a[name] {
             display: none;
         }
+
+        a { color: var(--accent); }
+        a:hover { text-decoration: underline; }
+
+        .section-anchor {
+            scroll-margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 14px; }
+            #container { padding: 16px; border-radius: 12px; }
+            h1 { font-size: 1.7rem; }
+            h2 { font-size: 1rem; }
+        }
     </style>
 
 
 </head>
 
 <body>
+    <div class="lex-top">
+        <span class="lex-glyph">&sect;</span>
+        <span>BGB Bot<small>German Civil Code text</small></span>
+        <span class="lex-spacer"></span>
+        <button id="themeToggle" class="theme-btn" type="button" title="Toggle theme" aria-label="Toggle theme"></button>
+    </div>
     <div id="container">
         <div id="paddingLR12">
             <h1>German Civil Code</h1>
@@ -37551,5 +37658,34 @@
         </div>
     </div>
 </body>
+<script>
+    (function () {
+        var btn = document.getElementById("themeToggle");
+        if (!btn) return;
+
+        function icon(theme) {
+            if (theme === "dark") {
+                return '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>';
+            }
+            return '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path></svg>';
+        }
+
+        function getTheme() {
+            return document.documentElement.getAttribute("data-theme") || "dark";
+        }
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute("data-theme", theme);
+            localStorage.setItem("lex_theme", theme);
+            btn.innerHTML = icon(theme);
+        }
+
+        btn.addEventListener("click", function () {
+            setTheme(getTheme() === "dark" ? "light" : "dark");
+        });
+
+        setTheme(getTheme());
+    })();
+</script>
 
 </html>

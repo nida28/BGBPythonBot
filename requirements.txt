@@ -1,4 +1,3 @@
-gradio
 openai
 numpy
 fastapi
