@@ -13,10 +13,16 @@ This repository **does not include** the `.env` file or the embeddings JSONL fil
     OPENAI_API_KEY=your_openai_api_key_here
     ```
 
-2. **Add the embeddings file** to the root folder as:
+2. **Add the embeddings file** to either:
 
     ```bash
     bgb_embeddings_new_data.jsonl
+    ```
+
+    or:
+
+    ```bash
+    data/bgb_embeddings_new_data.jsonl
     ```
 
 This file contains the precomputed embeddings used by the application and is required for the chatbot to function.
@@ -108,6 +114,15 @@ uvicorn app:app --reload
 The app will be available at `http://localhost:8000`
 
 Note: `app.py` automatically adds `src/` to `sys.path` so the `bgbpythonbot` package is importable at runtime. You can also run with `PYTHONPATH=src` if you prefer.
+
+### Optional runtime environment variables
+
+- `EMBEDDINGS_FILE` (default auto-detects root or `data/`)
+- `PUBLIC_BASE_URL` (default `http://localhost:8000`; set this in production so citation links use your public domain)
+
+### Health check
+
+- `GET /healthz` returns `{ "status": "ok" }`
 
 ### Visual Flow
 

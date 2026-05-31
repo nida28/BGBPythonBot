@@ -10,6 +10,7 @@ import re
 import tempfile
 from pathlib import Path
 import sys
+import inspect
 
 # Ensure `src/` is on the import path so `bgbpythonbot` package is importable at runtime
 sys.path.insert(0, str(Path(__file__).resolve().parent.joinpath("src")))
@@ -18,11 +19,35 @@ from bgbpythonbot.document_parser import parse_document
 from bgbpythonbot.document_store import DocumentStore
 
 # === CONFIG ===
-EMBEDDINGS_FILE = "bgb_embeddings_new_data.jsonl"
+BASE_DIR = Path(__file__).resolve().parent
+DEFAULT_EMBEDDINGS_CANDIDATES = [
+    BASE_DIR / "bgb_embeddings_new_data.jsonl",
+    BASE_DIR / "data" / "bgb_embeddings_new_data.jsonl",
+]
+
+
+def resolve_embeddings_file() -> Path:
+    env_value = os.getenv("EMBEDDINGS_FILE")
+    if env_value:
+        candidate = Path(env_value)
+        if not candidate.is_absolute():
+            candidate = BASE_DIR / candidate
+        return candidate
+
+    for candidate in DEFAULT_EMBEDDINGS_CANDIDATES:
+        if candidate.exists():
+            return candidate
+
+    # Preserve previous behavior if file is missing by returning default root path
+    return DEFAULT_EMBEDDINGS_CANDIDATES[0]
+
+
+EMBEDDINGS_FILE = resolve_embeddings_file()
 EMBEDDING_MODEL = "text-embedding-3-small"
 CHAT_MODEL = "gpt-4o"
 TOP_K = 3
-STATIC_URL_BASE = "http://localhost:8000/static/bgb_new.html"
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("/")
+STATIC_URL_BASE = f"{PUBLIC_BASE_URL}/static/bgb_new.html"
 PROMPT_PREAMBLE = (
    "You are a friendly and helpful legal assistant specialized in the German Civil Code (BGB). "
     "Please base your answers strictly on the provided BGB content, referencing the clickable section and paragraph links given below, including inline subsection links such as [327c](...). "
@@ -281,20 +306,23 @@ def handle_message_with_upload(message, history):
 
 def create_app_ui():
     """Create Gradio multimodal chat interface with document upload."""
-    demo = gr.ChatInterface(
-        fn=handle_message_with_upload,
-        title="BGB Legal Chatbot",
-        theme="ocean",
-        description="Ask me about German civil law. Upload documents (PDF/DOCX) for context-aware analysis. Type 'Section' or 'BGB' to trigger legal lookup.",
-        examples=[
+    chat_kwargs = {
+        "fn": handle_message_with_upload,
+        "title": "BGB Legal Chatbot",
+        "description": "Ask me about German civil law. Upload documents (PDF/DOCX) for context-aware analysis. Type 'Section' or 'BGB' to trigger legal lookup.",
+        "examples": [
             {"text": "My landlord just increased my rent, what can i do according to the BGB?"},
             {"text": "Can you explain the exclusions for certain trips from the package travel contract rules in Section 651a?"},
             {"text": "I need to return an item I purchased - what does the BGB say about this?"},
-            {"text": "What are my consumer rights according to the BGB?"}
+            {"text": "What are my consumer rights according to the BGB?"},
         ],
-        type="messages",
-        multimodal=True,  # Enable multimodal input (text + files)
-    )
+        "multimodal": True,  # Enable multimodal input (text + files)
+    }
+
+    # Keep compatibility across Gradio versions by passing only supported kwargs.
+    supported = set(inspect.signature(gr.ChatInterface.__init__).parameters.keys())
+    filtered_kwargs = {k: v for k, v in chat_kwargs.items() if k in supported}
+    demo = gr.ChatInterface(**filtered_kwargs)
     
     return demo
 
@@ -306,6 +334,11 @@ demo = create_app_ui()
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app = gr.mount_gradio_app(app, demo, path="/")
+
+
+@app.get("/healthz")
+async def healthz():
+    return {"status": "ok"}
 
 # === FastAPI upload endpoint ===
 @app.post("/upload")
