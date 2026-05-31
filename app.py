@@ -11,12 +11,26 @@ import tempfile
 from pathlib import Path
 import sys
 import inspect
+import logging
+import time
+import uuid
 
 # Ensure `src/` is on the import path so `bgbpythonbot` package is importable at runtime
 sys.path.insert(0, str(Path(__file__).resolve().parent.joinpath("src")))
 
 from bgbpythonbot.document_parser import parse_document
 from bgbpythonbot.document_store import DocumentStore
+
+os.environ.setdefault("GRADIO_ANALYTICS_ENABLED", "False")
+
+# === Logging (structured JSON for Cloud Run) ===
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger("bgb-bot")
+
+
+def log_event(event, severity="INFO", **fields):
+    payload = {"severity": severity, "event": event, "service": "bgb-bot", **fields}
+    logger.info(json.dumps(payload, ensure_ascii=False))
 
 # === CONFIG ===
 BASE_DIR = Path(__file__).resolve().parent
@@ -92,9 +106,17 @@ SECTION_ANCHOR_MAP = {
 
 # === Embedding ===
 def get_query_embedding(text):
+    start = time.perf_counter()
     response = client.embeddings.create(
         model=EMBEDDING_MODEL,
         input=[text]
+    )
+    log_event(
+        "openai_call_completed",
+        operation="embedding",
+        model=EMBEDDING_MODEL,
+        duration_ms=round((time.perf_counter() - start) * 1000, 2),
+        input_chars=len(text or ""),
     )
     return response.data[0].embedding
 
@@ -171,6 +193,15 @@ def replace_subsection_links(text, section_anchor_map, base_url):
 
 
 def answer_question(user_input, history):
+    request_id = str(uuid.uuid4())
+    request_start = time.perf_counter()
+    log_event(
+        "request_started",
+        request_id=request_id,
+        has_history=bool(history),
+        input_chars=len(user_input or ""),
+    )
+
     user_input_lc = user_input.lower()
     is_bgb_query = "section" in user_input_lc or "bgb" in user_input_lc
     has_uploaded_doc = document_store.has_documents()
@@ -183,11 +214,39 @@ def answer_question(user_input, history):
     # If just asking a general question with no keywords, use GPT directly
     # UNLESS there's an uploaded document, then we should search it
     if not is_bgb_query and not has_uploaded_doc:
-        chat_resp = client.chat.completions.create(
-            model=CHAT_MODEL,
-            messages=[{"role": "user", "content": user_input}]
-        )
-        return chat_resp.choices[0].message.content
+        try:
+            model_start = time.perf_counter()
+            chat_resp = client.chat.completions.create(
+                model=CHAT_MODEL,
+                messages=[{"role": "user", "content": user_input}]
+            )
+            response_text = chat_resp.choices[0].message.content
+            log_event(
+                "openai_call_completed",
+                request_id=request_id,
+                operation="chat",
+                model=CHAT_MODEL,
+                duration_ms=round((time.perf_counter() - model_start) * 1000, 2),
+            )
+            log_event(
+                "request_completed",
+                request_id=request_id,
+                route_type="general_chat",
+                latency_ms=round((time.perf_counter() - request_start) * 1000, 2),
+                response_chars=len(response_text or ""),
+            )
+            return response_text
+        except Exception as e:
+            log_event(
+                "openai_call_failed",
+                severity="ERROR",
+                request_id=request_id,
+                operation="chat",
+                model=CHAT_MODEL,
+                error_type=type(e).__name__,
+                error_message=str(e),
+            )
+            raise
 
     # If looking for a specific section
     match = re.search(r'section\s+(\d+[a-z]?)', user_input_lc)
@@ -202,6 +261,7 @@ def answer_question(user_input, history):
 
     else:
         # Search both BGB and uploaded documents
+        retrieval_start = time.perf_counter()
         query_embedding = get_query_embedding(user_input)
         
         # Search uploaded document chunks FIRST (prioritize them)
@@ -224,14 +284,53 @@ def answer_question(user_input, history):
             
             chunks = [item["chunk"] for item in ranked_bgb[:TOP_K]]
             print(f"DEBUG: Using {len(chunks)} BGB results (no uploaded)")
+
+        log_event(
+            "retrieval_completed",
+            request_id=request_id,
+            route_type="rag",
+            has_uploaded_doc=has_uploaded_doc,
+            uploaded_chunks_found=len(ranked_uploaded) if has_uploaded_doc else 0,
+            selected_chunks=len(chunks),
+            top_k=TOP_K,
+            retrieval_ms=round((time.perf_counter() - retrieval_start) * 1000, 2),
+        )
         
         prompt = build_prompt_from_chunks(chunks, user_input)
 
-    response = client.chat.completions.create(
-        model=CHAT_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return response.choices[0].message.content
+    try:
+        model_start = time.perf_counter()
+        response = client.chat.completions.create(
+            model=CHAT_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        response_text = response.choices[0].message.content
+        log_event(
+            "openai_call_completed",
+            request_id=request_id,
+            operation="chat",
+            model=CHAT_MODEL,
+            duration_ms=round((time.perf_counter() - model_start) * 1000, 2),
+        )
+        log_event(
+            "request_completed",
+            request_id=request_id,
+            route_type="rag",
+            latency_ms=round((time.perf_counter() - request_start) * 1000, 2),
+            response_chars=len(response_text or ""),
+        )
+        return response_text
+    except Exception as e:
+        log_event(
+            "openai_call_failed",
+            severity="ERROR",
+            request_id=request_id,
+            operation="chat",
+            model=CHAT_MODEL,
+            error_type=type(e).__name__,
+            error_message=str(e),
+        )
+        raise
 
 
 
@@ -282,6 +381,7 @@ def handle_message_with_upload(message, history):
         print(f"DEBUG: Processing file: {filename}, path: {file_path}")
         
         try:
+            upload_start = time.perf_counter()
             # Parse document directly
             chunks = parse_document(file_path, filename)
             print(f"DEBUG: Created {len(chunks)} chunks from {filename}")
@@ -290,9 +390,22 @@ def handle_message_with_upload(message, history):
             document_store.add_chunks(chunks, get_query_embedding)
             
             chunk_count = document_store.get_chunk_count()
+            log_event(
+                "document_uploaded",
+                filename=filename,
+                chunks_created=chunk_count,
+                duration_ms=round((time.perf_counter() - upload_start) * 1000, 2),
+            )
             upload_msg = f"✓ Uploaded: {filename} ({chunk_count} chunks)\n\n"
             print(f"DEBUG: Document stored with {chunk_count} chunks")
         except Exception as e:
+            log_event(
+                "document_parse_failed",
+                severity="ERROR",
+                filename=filename,
+                error_type=type(e).__name__,
+                error_message=str(e),
+            )
             print(f"DEBUG: Error parsing document: {e}")
             import traceback
             traceback.print_exc()
@@ -338,6 +451,7 @@ app = gr.mount_gradio_app(app, demo, path="/")
 
 @app.get("/healthz")
 async def healthz():
+    log_event("healthcheck")
     return {"status": "ok"}
 
 # === FastAPI upload endpoint ===
@@ -348,24 +462,25 @@ async def upload_document(file: UploadFile = File(...)):
     Returns JSON with status, chunk count, or error message.
     """
     try:
-        # Validate filename
         if not file.filename:
             raise HTTPException(status_code=400, detail="No filename provided")
-        
-        # Create temp file
+
         with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename).suffix) as tmp:
             content = await file.read()
             tmp.write(content)
             tmp_path = tmp.name
-        
+
         try:
-            # Parse document
+            upload_start = time.perf_counter()
             chunks = parse_document(tmp_path, file.filename)
-            
-            # Generate embeddings and store
             document_store.add_chunks(chunks, get_query_embedding)
-            
             chunk_count = document_store.get_chunk_count()
+            log_event(
+                "document_uploaded_api",
+                filename=file.filename,
+                chunks_created=chunk_count,
+                duration_ms=round((time.perf_counter() - upload_start) * 1000, 2),
+            )
             return {
                 "status": "success",
                 "message": f"Uploaded {file.filename} ({chunk_count} chunks)",
@@ -373,13 +488,26 @@ async def upload_document(file: UploadFile = File(...)):
                 "chunk_count": chunk_count
             }
         finally:
-            # Clean up temp file
             Path(tmp_path).unlink(missing_ok=True)
-    
+
     except ValueError as e:
+        log_event(
+            "upload_failed",
+            severity="ERROR",
+            filename=file.filename if file else None,
+            error_type=type(e).__name__,
+            error_message=str(e),
+        )
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        log_event(
+            "upload_failed",
+            severity="ERROR",
+            filename=file.filename if file else None,
+            error_type=type(e).__name__,
+            error_message=str(e),
+        )
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
-
 # === To run ===
 # uvicorn app:app --reload
+
