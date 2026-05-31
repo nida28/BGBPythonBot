@@ -2,15 +2,15 @@ from dotenv import load_dotenv
 import os
 import json
 import numpy as np
-import gradio as gr
 from openai import OpenAI
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
 from starlette.staticfiles import StaticFiles
 import re
 import tempfile
 from pathlib import Path
 import sys
-import inspect
 import logging
 import time
 import uuid
@@ -20,8 +20,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.joinpath("src")))
 
 from bgbpythonbot.document_parser import parse_document
 from bgbpythonbot.document_store import DocumentStore
-
-os.environ.setdefault("GRADIO_ANALYTICS_ENABLED", "False")
 
 # === Logging (structured JSON for Cloud Run) ===
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -192,7 +190,7 @@ def replace_subsection_links(text, section_anchor_map, base_url):
     return re.sub(pattern, replacer, text)
 
 
-def answer_question(user_input, history):
+def answer_question(user_input, history, force_bgb=False):
     request_id = str(uuid.uuid4())
     request_start = time.perf_counter()
     log_event(
@@ -203,7 +201,7 @@ def answer_question(user_input, history):
     )
 
     user_input_lc = user_input.lower()
-    is_bgb_query = "section" in user_input_lc or "bgb" in user_input_lc
+    is_bgb_query = force_bgb or "section" in user_input_lc or "bgb" in user_input_lc
     has_uploaded_doc = document_store.has_documents()
 
     if has_uploaded_doc:
@@ -334,120 +332,26 @@ def answer_question(user_input, history):
 
 
 
-# === Gradio UI ===
-# Multimodal chat interface with file upload support
-def handle_message_with_upload(message, history):
-    """Handle user messages in multimodal chat interface.
-    
-    Args:
-        message: Dict with 'text' and optional 'files' from Gradio multimodal input
-        history: Chat history
-    
-    Returns:
-        Response text
-    """
-    # Extract text from message
-    user_text = message.get("text", "")
-    
-    if not user_text.strip():
-        return "Please enter a question."
-    
-    # Check if file was uploaded in this message
-    files = message.get("files", [])
-    upload_msg = ""
-    
-    if files and len(files) > 0:
-        # Get first file (can be string path or file object)
-        file_input = files[0]
-        
-        # Debug: figure out what type we got
-        file_path = None
-        
-        print(f"DEBUG: File input type: {type(file_input)}, value: {file_input}")
-        
-        # If it's a string path
-        if isinstance(file_input, str):
-            file_path = file_input
-        # If it's a file object with 'name' attribute
-        elif hasattr(file_input, 'name'):
-            file_path = file_input.name
-        # If it's a dict with 'name' key (Gradio file object)
-        elif isinstance(file_input, dict) and 'name' in file_input:
-            file_path = file_input['name']
-        else:
-            file_path = str(file_input)
-        
-        filename = Path(file_path).name
-        print(f"DEBUG: Processing file: {filename}, path: {file_path}")
-        
-        try:
-            upload_start = time.perf_counter()
-            # Parse document directly
-            chunks = parse_document(file_path, filename)
-            print(f"DEBUG: Created {len(chunks)} chunks from {filename}")
-            
-            # Generate embeddings and store
-            document_store.add_chunks(chunks, get_query_embedding)
-            
-            chunk_count = document_store.get_chunk_count()
-            log_event(
-                "document_uploaded",
-                filename=filename,
-                chunks_created=chunk_count,
-                duration_ms=round((time.perf_counter() - upload_start) * 1000, 2),
-            )
-            upload_msg = f"✓ Uploaded: {filename} ({chunk_count} chunks)\n\n"
-            print(f"DEBUG: Document stored with {chunk_count} chunks")
-        except Exception as e:
-            log_event(
-                "document_parse_failed",
-                severity="ERROR",
-                filename=filename,
-                error_type=type(e).__name__,
-                error_message=str(e),
-            )
-            print(f"DEBUG: Error parsing document: {e}")
-            import traceback
-            traceback.print_exc()
-            upload_msg = f"⚠️ Upload error: {str(e)}\n\n"
-    
-    # Process question (with or without uploaded file)
-    response_text = answer_question(user_text, history)
-    
-    return upload_msg + response_text
-
-
-def create_app_ui():
-    """Create Gradio multimodal chat interface with document upload."""
-    chat_kwargs = {
-        "fn": handle_message_with_upload,
-        "title": "BGB Legal Chatbot",
-        "description": "Ask me about German civil law. Upload documents (PDF/DOCX) for context-aware analysis. Type 'Section' or 'BGB' to trigger legal lookup.",
-        "examples": [
-            {"text": "My landlord just increased my rent, what can i do according to the BGB?"},
-            {"text": "Can you explain the exclusions for certain trips from the package travel contract rules in Section 651a?"},
-            {"text": "I need to return an item I purchased - what does the BGB say about this?"},
-            {"text": "What are my consumer rights according to the BGB?"},
-        ],
-        "multimodal": True,  # Enable multimodal input (text + files)
-    }
-
-    # Keep compatibility across Gradio versions by passing only supported kwargs.
-    supported = set(inspect.signature(gr.ChatInterface.__init__).parameters.keys())
-    filtered_kwargs = {k: v for k, v in chat_kwargs.items() if k in supported}
-    demo = gr.ChatInterface(**filtered_kwargs)
-    
-    return demo
-
-demo = create_app_ui()
-
-# demo.launch() -- needed to host on server and comment out below code
-
-# === Mount Gradio and static HTML ===
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app = gr.mount_gradio_app(app, demo, path="/")
 
+
+class ChatRequest(BaseModel):
+    message: str
+    bgb_search: bool = False
+
+
+@app.get("/")
+async def root():
+    return FileResponse("static/app.html")
+
+
+@app.post("/chat")
+async def chat(req: ChatRequest):
+    if not req.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+    answer = answer_question(req.message, history=None, force_bgb=req.bgb_search)
+    return {"answer": answer}
 
 @app.get("/healthz")
 async def healthz():
@@ -510,4 +414,5 @@ async def upload_document(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 # === To run ===
 # uvicorn app:app --reload
+
 
