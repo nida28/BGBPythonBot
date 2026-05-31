@@ -75,3 +75,7 @@ create_tech_presentation.py
 sample_bgb_excerpt.pdf
 sample_test_document.txt
 test_document_handling.py
+
+# Organized docs and data folders
+/docs/
+/data/

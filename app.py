@@ -9,9 +9,13 @@ from starlette.staticfiles import StaticFiles
 import re
 import tempfile
 from pathlib import Path
+import sys
 
-from document_parser import parse_document
-from document_store import DocumentStore
+# Ensure `src/` is on the import path so `bgbpythonbot` package is importable at runtime
+sys.path.insert(0, str(Path(__file__).resolve().parent.joinpath("src")))
+
+from bgbpythonbot.document_parser import parse_document
+from bgbpythonbot.document_store import DocumentStore
 
 # === CONFIG ===
 EMBEDDINGS_FILE = "bgb_embeddings_new_data.jsonl"

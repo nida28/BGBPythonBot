@@ -80,7 +80,9 @@ def split_into_sentences(text: str) -> List[str]:
     """Split text into sentences while preserving structure."""
     # Split on periods, exclamation marks, question marks, but preserve abbreviations
     sentences = re.split(r'(?<=[.!?])\s+', text)
-    return [s.strip() for s in sentences if s.strip()]
+    # Remove trailing punctuation from sentences (.,!,?) for normalized output
+    cleaned = [re.sub(r'[.!?]+$', '', s.strip()) for s in sentences if s.strip()]
+    return cleaned
 
 
 def create_chunks(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = OVERLAP) -> List[str]:

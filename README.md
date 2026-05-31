@@ -23,6 +23,20 @@ This file contains the precomputed embeddings used by the application and is req
 
 ---
 
+## Repository layout (reorganized)
+
+Top-level structure now organizes code, docs, and data for clarity:
+
+- `app.py` — FastAPI + Gradio application entrypoint (root)
+- `src/bgbpythonbot/` — Python package containing library modules (`document_parser.py`, `document_store.py`)
+- `tests/` — Test suite (`test_document_handling.py`)
+- `scripts/` — Helper scripts (`build_validate.py`, etc.)
+- `docs/` — Markdown documentation and reports (moved from root)
+- `data/` — Large or binary data files (embeddings, samples)
+
+This layout keeps executable entrypoints at the project root while packaging reusable modules under `src/`.
+
+
 ### Notes:
 
 - Make sure your `.env` file is included in `.gitignore` to prevent accidental commits.
@@ -92,6 +106,8 @@ uvicorn app:app --reload
 ```
 
 The app will be available at `http://localhost:8000`
+
+Note: `app.py` automatically adds `src/` to `sys.path` so the `bgbpythonbot` package is importable at runtime. You can also run with `PYTHONPATH=src` if you prefer.
 
 ### Visual Flow
 
