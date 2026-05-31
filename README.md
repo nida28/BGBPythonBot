@@ -1,5 +1,5 @@
 # BGB Bot
-BGB Legal ChatBot is a friendly legal assistant focused on the German Civil Code (BGB). Using Retrieval-Augmented Generation (RAG), it provides clear, practical answers to questions about tenant rights, contracts, consumer protections, and more—tailored especially for expats in Germany. The bot references official BGB sections with clickable links for easy access to the original legal texts. Hosted at https://huggingface.co/spaces/nfm1708/BGBChatBot.
+BGB Legal ChatBot is a friendly legal assistant focused on the German Civil Code (BGB). Using Retrieval-Augmented Generation (RAG), it provides clear, practical answers to questions about tenant rights, contracts, consumer protections, and more—tailored especially for expats in Germany. The bot references official BGB sections with clickable links for easy access to the original legal texts. Hosted at https://bgb-bot-230904575198.europe-west1.run.app.
 
 ## Setup Instructions
 
@@ -13,17 +13,19 @@ This repository **does not include** the `.env` file or the embeddings JSONL fil
     OPENAI_API_KEY=your_openai_api_key_here
     ```
 
-2. **Add the embeddings file** to either:
+2. **Provide the embeddings file** (`bgb_embeddings_new_data.jsonl`) and set `EMBEDDINGS_FILE` to its path if it is not in project root.
 
-    ```bash
-    bgb_embeddings_new_data.jsonl
-    ```
+Examples:
 
-    or:
+```bash
+EMBEDDINGS_FILE=./bgb_embeddings_new_data.jsonl
+```
 
-    ```bash
-    data/bgb_embeddings_new_data.jsonl
-    ```
+or
+
+```bash
+EMBEDDINGS_FILE=/mnt/embeddings/bgb_embeddings_new_data.jsonl
+```
 
 This file contains the precomputed embeddings used by the application and is required for the chatbot to function.
 
@@ -117,7 +119,7 @@ Note: `app.py` automatically adds `src/` to `sys.path` so the `bgbpythonbot` pac
 
 ### Optional runtime environment variables
 
-- `EMBEDDINGS_FILE` (default auto-detects root or `data/`)
+- `EMBEDDINGS_FILE` (path to `bgb_embeddings_new_data.jsonl`; default auto-detects common local paths)
 - `PUBLIC_BASE_URL` (default `http://localhost:8000`; set this in production so citation links use your public domain)
 
 ### Health check
