@@ -5,3 +5,7 @@ fastapi
 uvicorn
 python-dotenv
 html5lib
+PyPDF2
+python-docx
+python-multipart
+requests
