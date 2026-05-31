@@ -1,5 +1,5 @@
 # BGB Bot
-BGB Legal ChatBot is a friendly legal assistant focused on the German Civil Code (BGB). Using Retrieval-Augmented Generation (RAG), it provides clear, practical answers to questions about tenant rights, contracts, consumer protections, and more—tailored especially for expats in Germany. The bot references official BGB sections with clickable links for easy access to the original legal texts. Hosted at https://bgb-bot-230904575198.europe-west1.run.app.
+BGB Legal ChatBot is a friendly legal assistant focused on the German Civil Code (BGB). Using Retrieval-Augmented Generation (RAG), it provides clear, practical answers to questions about tenant rights, contracts, consumer protections, and more—tailored especially for expats in Germany. The bot references official BGB sections with clickable links for easy access to the original legal texts. Hosted [**here**] (https://bgb-bot-230904575198.europe-west1.run.app).
 
 ## Setup Instructions
 
@@ -29,11 +29,16 @@ EMBEDDINGS_FILE=/mnt/embeddings/bgb_embeddings_new_data.jsonl
 
 This file contains the precomputed embeddings used by the application and is required for the chatbot to function.
 
+### Notes:
+
+- Make sure your `.env` file is included in `.gitignore` to prevent accidental commits.
+- The embeddings file is large and proprietary, so please request access separately or generate your own using the embedding script [**here**](https://github.com/nida28/BGBRagBot/blob/development/RAGBaseApp/RAGBaseApp/Program.cs).
+- Without these files, the chatbot will not start or will fail to respond correctly.
 ---
 
-## Repository layout (reorganized)
+## Repository layout 
 
-Top-level structure now organizes code, docs, and data for clarity:
+Top-level structure organizes code, docs, and data for clarity:
 
 - `app.py` — FastAPI + Gradio application entrypoint (root)
 - `src/bgbpythonbot/` — Python package containing library modules (`document_parser.py`, `document_store.py`)
@@ -43,13 +48,6 @@ Top-level structure now organizes code, docs, and data for clarity:
 - `data/` — Large or binary data files (embeddings, samples)
 
 This layout keeps executable entrypoints at the project root while packaging reusable modules under `src/`.
-
-
-### Notes:
-
-- Make sure your `.env` file is included in `.gitignore` to prevent accidental commits.
-- The embeddings file is large and proprietary, so please request access separately or generate your own using the embedding script [**here**](https://github.com/nida28/BGBRagBot/blob/development/RAGBaseApp/RAGBaseApp/Program.cs).
-- Without these files, the chatbot will not start or will fail to respond correctly.
 
 ---
 
